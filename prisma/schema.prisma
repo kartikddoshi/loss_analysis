@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model LossData {
+  id              Int      @id @default(autoincrement())
+  item_no         String
+  date            DateTime
+  process         String
+  karigar         String
+  loss            Float
+  pure_gold_loss Float
+  kt              Int
+
+  @@map("loss_data")
+}
+
+model WeightData {
+  id               Int      @id @default(autoincrement())
+  item_no          String
+  date             DateTime
+  gross_wt         Float
+  net_wt           Float
+  pure_gold_weight Float
+  kt               Int
+
+  @@map("weight_data")
+}
