@@ -2,22 +2,22 @@ import React, { useState } from 'react'
 import { useUploadStore } from '@/store/uploadStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useQueryClient } from '@tanstack/react-query'
 
 const UploadForm: React.FC = () => {
-  const { lossFile, weightFile, uploadMode, setLossFile, setWeightFile, setUploadMode, handleUpload, handleClearDatabase } = useUploadStore()
+  const { lossFile, weightFile, setLossFile, setWeightFile, handleUpload, handleClearDatabase } = useUploadStore()
   const [uploadResult, setUploadResult] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [replaceLoss, setReplaceLoss] = useState(false)
+  const [replaceWeight, setReplaceWeight] = useState(false)
   const queryClient = useQueryClient()
 
-  const onUpload = async () => {
+  const onUpload = async (fileType: 'loss' | 'weight') => {
     setIsUploading(true)
     setUploadResult(null)
     try {
-      const result = await handleUpload()
-      setUploadResult(`Successfully uploaded ${result.lossRecordsCount} loss records and ${result.weightRecordsCount} weight records.`)
-      // Refresh the data in the charts
+      const result = await handleUpload(fileType, fileType === 'loss' ? replaceLoss : replaceWeight)
+      setUploadResult(`Successfully uploaded ${result.recordsCount} ${fileType} records.`)
       queryClient.invalidateQueries(['itemWiseLoss', 'karigarWiseLoss', 'monthWiseLoss', 'processWiseLoss'])
     } catch (error) {
       setUploadResult(`Error: ${error.message}`)
@@ -27,41 +27,61 @@ const UploadForm: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <div>
-        <Label htmlFor="lossFile">Loss Data File</Label>
-        <input
-          id="lossFile"
-          type="file"
-          onChange={(e) => setLossFile(e.target.files?.[0] || null)}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
+        <h3 className="text-lg font-semibold mb-2">Loss Data</h3>
+        <div className="flex items-center space-x-2 mb-2">
+          <Button onClick={() => document.getElementById('lossFile')?.click()} disabled={isUploading}>
+            Choose File
+          </Button>
+          <input
+            id="lossFile"
+            type="file"
+            onChange={(e) => setLossFile(e.target.files?.[0] || null)}
+            className="hidden"
+          />
+          <input
+            type="checkbox"
+            id="replaceLoss"
+            checked={replaceLoss}
+            onChange={(e) => setReplaceLoss(e.target.checked)}
+          />
+          <Label htmlFor="replaceLoss">Replace</Label>
+          <Button onClick={() => onUpload('loss')} disabled={!lossFile || isUploading}>
+            {isUploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </div>
+        {lossFile && <p className="text-sm text-gray-600">Selected file: {lossFile.name}</p>}
       </div>
+
       <div>
-        <Label htmlFor="weightFile">Weight Data File</Label>
-        <input
-          id="weightFile"
-          type="file"
-          onChange={(e) => setWeightFile(e.target.files?.[0] || null)}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-        />
+        <h3 className="text-lg font-semibold mb-2">Weight Data</h3>
+        <div className="flex items-center space-x-2 mb-2">
+          <Button onClick={() => document.getElementById('weightFile')?.click()} disabled={isUploading}>
+            Choose File
+          </Button>
+          <input
+            id="weightFile"
+            type="file"
+            onChange={(e) => setWeightFile(e.target.files?.[0] || null)}
+            className="hidden"
+          />
+          <input
+            type="checkbox"
+            id="replaceWeight"
+            checked={replaceWeight}
+            onChange={(e) => setReplaceWeight(e.target.checked)}
+          />
+          <Label htmlFor="replaceWeight">Replace</Label>
+          <Button onClick={() => onUpload('weight')} disabled={!weightFile || isUploading}>
+            {isUploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </div>
+        {weightFile && <p className="text-sm text-gray-600">Selected file: {weightFile.name}</p>}
       </div>
-      <div>
-        <Label htmlFor="uploadMode">Upload Mode</Label>
-        <Select onValueChange={(value: 'add' | 'replace') => setUploadMode(value)} value={uploadMode}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select upload mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="add">Add</SelectItem>
-            <SelectItem value="replace">Replace</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <Button onClick={onUpload} disabled={(!lossFile && !weightFile) || isUploading}>
-        {isUploading ? 'Uploading...' : 'Upload'}
-      </Button>
-      <Button onClick={handleClearDatabase} variant="destructive" disabled={isUploading}>Clear Database</Button>
+
+      <Button onClick={handleClearDatabase} variant="destructive" disabled={isUploading}>Clear All Data</Button>
+
       {uploadResult && (
         <div className={`mt-4 p-4 rounded-md ${uploadResult.startsWith('Error') ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
           {uploadResult}

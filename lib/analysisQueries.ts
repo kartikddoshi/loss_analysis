@@ -1,14 +1,13 @@
 export async function getItems() {
   try {
-    // Fetch items with loss data from the API
     const response = await fetch('/api/items-with-loss')
     if (!response.ok) throw new Error('Network response was not ok')
     const data = await response.json()
     
-    // Map the response to only include item_no and loss_percentage
     return data.map(item => ({
       item_no: item.item_no,
-      loss_percentage: item.loss_percentage
+      loss_percentage: item.loss_percentage,
+      date: item.date // Include the date field
     }))
   } catch (error) {
     console.error('Error fetching items:', error)

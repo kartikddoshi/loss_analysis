@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import UploadForm from '@/components/UploadForm'
-import AnalysisCharts from '@/components/AnalysisCharts'
-import ItemDetails from '@/components/ItemDetails'
 import ItemList from '@/components/ItemList'
-import { useUploadStore } from '@/store/uploadStore'
-import { AnalysisData } from '@/types'
+
+const AnalysisCharts = dynamic(() => import('@/components/AnalysisCharts'), { ssr: false })
+const ItemDetails = dynamic(() => import('@/components/ItemDetails'), { ssr: false })
 
 const queryClient = new QueryClient()
 

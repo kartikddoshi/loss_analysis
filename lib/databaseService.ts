@@ -279,6 +279,7 @@ export const DatabaseService = {
       select: {
         item_no: true,
         pure_gold_weight: true,
+        date: true,
       },
     });
 
@@ -300,6 +301,7 @@ export const DatabaseService = {
       return {
         item_no: item.item_no,
         loss_percentage: Number(lossPercentage.toFixed(3)),
+        date: item.date,
       };
     });
   },

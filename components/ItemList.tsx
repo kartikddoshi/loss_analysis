@@ -4,72 +4,105 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { getItems } from '@/lib/analysisQueries';
+import { ChevronRight, ChevronDown } from 'lucide-react'; // Import icons
 
 interface ItemListProps {
   onItemSelect: (item: string) => void;
 }
 
-const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
-  // State to manage sorting option
-  const [sortBy, setSortBy] = useState<'item_no' | 'loss'>('item_no');
-  const [searchTerm, setSearchTerm] = useState('');
+interface ItemData {
+  item_no: string;
+  loss_percentage: number;
+  date: string; // Changed from Date to string
+}
 
-  // Fetch items data using React Query
-  const { data: items, isLoading, error } = useQuery({
+const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
+  const [sortBy, setSortBy] = useState<'item_no' | 'loss'>('item_no');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const { data: items, isLoading, error } = useQuery<ItemData[]>({
     queryKey: ['items-with-loss'],
     queryFn: getItems
   });
 
-  // Memoized filtered and sorted items array
-  const filteredAndSortedItems = useMemo(() => {
-    if (!items) return [];
-    return [...items]
-      .filter(item => item.item_no.toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => {
-        if (sortBy === 'loss') return b.loss_percentage - a.loss_percentage;
-        return a.item_no.localeCompare(b.item_no);
+  const groupedAndSortedItems = useMemo(() => {
+    if (!items) return {};
+
+    const filtered = items.filter(item => 
+      item.item_no.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const grouped = filtered.reduce((acc, item) => {
+      const date = new Date(item.date);
+      const monthYear = !isNaN(date.getTime())
+        ? `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+        : 'Unknown Date';
+      
+      if (!acc[monthYear]) {
+        acc[monthYear] = [];
+      }
+      acc[monthYear].push(item);
+      return acc;
+    }, {} as Record<string, ItemData[]>);
+
+    Object.keys(grouped).forEach(key => {
+      grouped[key].sort((a, b) => {
+        if (sortBy === 'loss') {
+          return sortOrder === 'asc' 
+            ? a.loss_percentage - b.loss_percentage
+            : b.loss_percentage - a.loss_percentage;
+        }
+        return sortOrder === 'asc'
+          ? a.item_no.localeCompare(b.item_no)
+          : b.item_no.localeCompare(a.item_no);
       });
-  }, [items, sortBy, searchTerm]);
+    });
 
-  // Calculate maximum loss percentage for color scaling
-  const maxLossPercentage = useMemo(() => {
-    if (!items) return 0;
-    return Math.max(...items.map(item => item.loss_percentage));
-  }, [items]);
+    return Object.fromEntries(
+      Object.entries(grouped).sort((a, b) => {
+        if (a[0] === 'Unknown Date') return 1;
+        if (b[0] === 'Unknown Date') return -1;
+        return sortOrder === 'asc'
+          ? new Date(a[0]).getTime() - new Date(b[0]).getTime()
+          : new Date(b[0]).getTime() - new Date(a[0]).getTime();
+      })
+    );
+  }, [items, sortBy, sortOrder, searchTerm]);
 
-  // Function to determine color based on loss percentage
+  const toggleGroup = (monthYear: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [monthYear]: !prev[monthYear]
+    }));
+  };
+
   const getColorForLossPercentage = (lossPercentage: number) => {
     if (lossPercentage <= 12) {
-      // Green to red gradient for 0-12%
       const hue = (1 - lossPercentage / 12) * 120;
       return `hsl(${hue}, 100%, 35%)`;
     } else {
-      // Darker shades of red for >12%
       const lightness = Math.max(20, 50 - (lossPercentage - 12) * 2);
       return `hsl(0, 100%, ${lightness}%)`;
     }
   };
 
-  // Loading state
   if (isLoading) return <div>Loading items...</div>;
 
-  // Error state
   if (error) {
     console.error('Error loading items:', error);
     return <div>Error loading items. Please check the console for details.</div>;
   }
 
-  // No data state
   if (!items || items.length === 0) {
     console.log('No items available');
     return <div>No items available</div>;
   }
 
-  // Render the component
   return (
     <div className="w-64 bg-white dark:bg-gray-800 p-4 shadow-lg flex flex-col h-full">
       <h2 className="text-xl font-bold mb-4">Items</h2>
-      {/* Sorting dropdown */}
       <Select onValueChange={(value: 'item_no' | 'loss') => setSortBy(value)} value={sortBy}>
         <SelectTrigger className="w-full mb-4">
           <SelectValue placeholder="Sort by" />
@@ -79,7 +112,15 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
           <SelectItem value="loss">Loss Percentage</SelectItem>
         </SelectContent>
       </Select>
-      {/* Search box */}
+      <Select onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)} value={sortOrder}>
+        <SelectTrigger className="w-full mb-4">
+          <SelectValue placeholder="Sort order" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">Ascending</SelectItem>
+          <SelectItem value="desc">Descending</SelectItem>
+        </SelectContent>
+      </Select>
       <Input
         type="text"
         placeholder="Search items..."
@@ -87,18 +128,32 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-4"
       />
-      {/* Scrollable list of items */}
-      <div className="space-y-2 overflow-y-auto flex-grow" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-        {filteredAndSortedItems.map((item) => (
-          <Button
-            key={item.item_no}
-            variant="ghost"
-            className="w-full justify-start text-white"
-            style={{ backgroundColor: getColorForLossPercentage(item.loss_percentage) }}
-            onClick={() => onItemSelect(item.item_no)}
-          >
-            {item.item_no} - {item.loss_percentage.toFixed(2)}%
-          </Button>
+      <div className="space-y-4 overflow-y-auto flex-grow" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+        {Object.entries(groupedAndSortedItems).map(([monthYear, monthItems]) => (
+          <div key={monthYear} className="border-b border-gray-200 dark:border-gray-700 pb-2">
+            <button
+              onClick={() => toggleGroup(monthYear)}
+              className="flex items-center justify-between w-full text-left font-semibold mb-2 focus:outline-none"
+            >
+              <span>{monthYear}</span>
+              {expandedGroups[monthYear] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            </button>
+            {expandedGroups[monthYear] && (
+              <div className="space-y-2 ml-4">
+                {monthItems.map((item) => (
+                  <Button
+                    key={item.item_no}
+                    variant="ghost"
+                    className="w-full justify-start text-white"
+                    style={{ backgroundColor: getColorForLossPercentage(item.loss_percentage) }}
+                    onClick={() => onItemSelect(item.item_no)}
+                  >
+                    {item.item_no} - {item.loss_percentage.toFixed(2)}%
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>
