@@ -22,6 +22,7 @@ The system calculates loss percentages based on the pure gold weight of items an
 - Tailwind CSS (Styling)
 - React Query (Data fetching and caching)
 - shadcn/ui (UI components)
+- Zustand (State management)
 
 ## Directory Structure
 - `/app`: Next.js app router and API routes
@@ -30,6 +31,7 @@ The system calculates loss percentages based on the pure gold weight of items an
 - `/prisma`: Database schema and migrations
 - `/public`: Static assets
 - `/types`: TypeScript type definitions
+- `/store`: Zustand store for state management
 
 ## API Routes
 - `/api/analysis/[analysis]`: Handles different types of analysis queries
@@ -46,6 +48,7 @@ The system calculates loss percentages based on the pure gold weight of items an
 - `ItemList`: Displays a list of items with their loss percentages
 - `ItemDetails`: Shows detailed information for a specific item
 - `DashboardTabs`: Manages different views of the analysis data
+- `InputCard`: Provides a user interface for data input and database operations
 
 ## New Features and Improvements
 - Color-coded item list based on loss percentage
@@ -54,6 +57,7 @@ The system calculates loss percentages based on the pure gold weight of items an
 - Custom tooltips for charts with detailed information
 - Sortable item list by item number or loss percentage
 - Expandable process-wise and karigar-wise loss details in item view
+- Zustand store for centralized state management of upload functionality
 
 ## Database Schema
 - `LossData`: Stores information about gold loss per item
@@ -80,6 +84,22 @@ The system supports uploading loss and weight data via CSV files. Users can choo
 - Implement data export functionality
 - Add more advanced filtering and sorting options for analysis
 - Integrate with real-time data sources for live updates
+- Implement caching strategies for improved performance
+- Add unit and integration tests for better code reliability
+- Ideas for better visualizations:
+  - Heat maps: Use color intensity to represent loss percentages across different dimensions (items, karigars, processes).
+  - Scatter plots: Plot items based on their weight and loss percentage to identify any correlations.
+  - Stacked bar charts: Show the composition of losses for each item or karigar across different processes.
+  - Treemap: Visualize hierarchical data, such as losses by item, then by process, then by karigar.
+  - Sankey diagram: Show the flow of losses from items through processes and karigars.
+  - Time series analysis: Identify trends and seasonality in losses over time.
+  - Pareto charts: Highlight the most significant contributors to total loss.
+  - Radar charts: Compare multiple variables (e.g., different types of losses) across items or karigars.
+- For more advanced analytics, consider implementing:
+  - Loss trends over time
+  - Comparisons between different processes
+  - Karigar performance rankings
+  - Anomaly detection for unusually high losses
 
 ## File Documentation
 
