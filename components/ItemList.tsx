@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { getItems } from '@/lib/analysisQueries';
 
 interface ItemListProps {
@@ -11,6 +12,7 @@ interface ItemListProps {
 const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
   // State to manage sorting option
   const [sortBy, setSortBy] = useState<'item_no' | 'loss'>('item_no');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch items data using React Query
   const { data: items, isLoading, error } = useQuery({
@@ -18,14 +20,16 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
     queryFn: getItems
   });
 
-  // Memoized sorted items array
-  const sortedItems = useMemo(() => {
+  // Memoized filtered and sorted items array
+  const filteredAndSortedItems = useMemo(() => {
     if (!items) return [];
-    return [...items].sort((a, b) => {
-      if (sortBy === 'loss') return b.loss_percentage - a.loss_percentage;
-      return a.item_no.localeCompare(b.item_no);
-    });
-  }, [items, sortBy]);
+    return [...items]
+      .filter(item => item.item_no.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => {
+        if (sortBy === 'loss') return b.loss_percentage - a.loss_percentage;
+        return a.item_no.localeCompare(b.item_no);
+      });
+  }, [items, sortBy, searchTerm]);
 
   // Calculate maximum loss percentage for color scaling
   const maxLossPercentage = useMemo(() => {
@@ -75,9 +79,17 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
           <SelectItem value="loss">Loss Percentage</SelectItem>
         </SelectContent>
       </Select>
+      {/* Search box */}
+      <Input
+        type="text"
+        placeholder="Search items..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="mb-4"
+      />
       {/* Scrollable list of items */}
-      <div className="space-y-2 overflow-y-auto flex-grow" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-        {sortedItems.map((item) => (
+      <div className="space-y-2 overflow-y-auto flex-grow" style={{ maxHeight: 'calc(100vh - 250px)' }}>
+        {filteredAndSortedItems.map((item) => (
           <Button
             key={item.item_no}
             variant="ghost"
