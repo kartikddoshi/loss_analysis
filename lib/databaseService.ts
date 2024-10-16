@@ -1,6 +1,8 @@
 import { prisma } from './database'
 import { UploadMode } from '@/types'
 
+const BATCH_SIZE = 100; // Adjust this value based on your needs
+
 export const DatabaseService = {
   // Analysis queries
   getItemWiseLoss: async () => {
@@ -226,23 +228,31 @@ export const DatabaseService = {
   },
 
   // Data upload
-  uploadData: async (lossData: any[], weightData: any[], mode: UploadMode) => {
-    if (mode === 'replace') {
-      await prisma.lossData.deleteMany();
-      await prisma.weightData.deleteMany();
+  uploadData: async (fileType: 'loss' | 'weight', data: any[], replace: boolean) => {
+    const model = fileType === 'loss' ? prisma.lossData : prisma.weightData;
+
+    if (replace) {
+      await model.deleteMany();
     }
 
-    const lossRecords = await prisma.lossData.createMany({
-      data: lossData,
-      skipDuplicates: true,
-    });
+    let insertedCount = 0;
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE);
+      await prisma.$transaction(async (tx) => {
+        for (const item of batch) {
+          try {
+            await tx[fileType === 'loss' ? 'lossData' : 'weightData'].create({
+              data: item
+            });
+            insertedCount++;
+          } catch (error) {
+            console.error(`Error inserting item: ${item.item_no}`, error);
+          }
+        }
+      });
+    }
 
-    const weightRecords = await prisma.weightData.createMany({
-      data: weightData,
-      skipDuplicates: true,
-    });
-
-    return { lossRecordsCount: lossRecords.count, weightRecordsCount: weightRecords.count };
+    return insertedCount;
   },
 
   // Clear database

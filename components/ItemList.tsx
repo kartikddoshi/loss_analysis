@@ -37,7 +37,7 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
     const grouped = filtered.reduce((acc, item) => {
       const date = new Date(item.date);
       const monthYear = !isNaN(date.getTime())
-        ? `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+        ? `${date.getFullYear().toString().slice(-2)}-${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'short' })}`
         : 'Unknown Date';
       
       if (!acc[monthYear]) {
@@ -64,9 +64,9 @@ const ItemList: React.FC<ItemListProps> = ({ onItemSelect }) => {
       Object.entries(grouped).sort((a, b) => {
         if (a[0] === 'Unknown Date') return 1;
         if (b[0] === 'Unknown Date') return -1;
-        return sortOrder === 'asc'
-          ? new Date(a[0]).getTime() - new Date(b[0]).getTime()
-          : new Date(b[0]).getTime() - new Date(a[0]).getTime();
+        const dateA = new Date(20 + a[0].slice(0, 2), parseInt(a[0].slice(3, 5)) - 1);
+        const dateB = new Date(20 + b[0].slice(0, 2), parseInt(b[0].slice(3, 5)) - 1);
+        return dateB.getTime() - dateA.getTime();
       })
     );
   }, [items, sortBy, sortOrder, searchTerm]);

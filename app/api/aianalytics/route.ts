@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const { analysisData } = await request.json();
 
     // Initialize the model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-exp-0827" });
 
     // Prepare the prompt
     const prompt = `Analyze the following gold loss data and provide insights:

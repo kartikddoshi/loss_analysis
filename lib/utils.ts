@@ -12,7 +12,7 @@ export function convertToPureGold(weight: number, karat: number): number {
 
 export function parseDate(dateString: string): Date {
   const [day, month, year] = dateString.split('/').map(Number);
-  return new Date(Date.UTC(year + 2000, month - 1, day)); // Assuming years are in YY format
+  return new Date(Date.UTC(year + 2000, month - 1, day));
 }
 
 export async function processLossData(file: File) {
@@ -25,7 +25,7 @@ export async function processLossData(file: File) {
     karigar: row.KAR,
     process: row.PROCESS,
     loss: parseFloat(row.LOSS),
-    pure_gold_loss: Number(((parseFloat(row.LOSS) * parseInt(row.KT)) / (24 * 0.995)).toFixed(3)),
+    pure_gold_loss: convertToPureGold(parseFloat(row.LOSS), parseInt(row.KT)),
   }))
 }
 

@@ -2,11 +2,11 @@ import { UploadMode } from '@/types';
 import { prisma } from './database';
 import axios from 'axios';
 
-export const uploadData = async (lossFile: File | null, weightFile: File | null, mode: UploadMode): Promise<{ lossRecordsCount: number, weightRecordsCount: number }> => {
+export const uploadData = async (fileType: 'loss' | 'weight', file: File, replace: boolean): Promise<number> => {
   const formData = new FormData();
-  if (lossFile) formData.append('lossFile', lossFile);
-  if (weightFile) formData.append('weightFile', weightFile);
-  formData.append('mode', mode);
+  formData.append('file', file);
+  formData.append('fileType', fileType);
+  formData.append('replace', replace.toString());
 
   const response = await fetch('/api/upload-data', {
     method: 'POST',
@@ -19,10 +19,7 @@ export const uploadData = async (lossFile: File | null, weightFile: File | null,
   }
 
   const result = await response.json();
-  return {
-    lossRecordsCount: result.lossRecordsCount,
-    weightRecordsCount: result.weightRecordsCount
-  };
+  return result.recordsCount;
 }
 
 export const clearDatabase = async (): Promise<void> => {

@@ -8,15 +8,16 @@ datasource db {
 }
 
 model LossData {
-  id              Int      @id @default(autoincrement())
-  item_no         String
-  date            DateTime
-  process         String
-  karigar         String
-  loss            Float
+  id             Int      @id @default(autoincrement())
+  item_no        String
+  date           DateTime
+  process        String
+  karigar        String
+  loss           Float
   pure_gold_loss Float
-  kt              Int
+  kt             Int
 
+  @@index([item_no, date])
   @@map("loss_data")
 }
 
@@ -29,5 +30,6 @@ model WeightData {
   pure_gold_weight Float
   kt               Int
 
+  @@index([item_no, date])
   @@map("weight_data")
 }
