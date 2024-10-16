@@ -44,24 +44,12 @@ export async function getKarigarWiseLoss() {
   }
 }
 
-export const getMonthWiseLoss = async (): Promise<MonthWiseLoss[]> => {
-  try {
-    // Fetch month-wise loss data from the API
-    const response = await fetch('/api/analysis/month-wise-loss');
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`API error: ${response.status} - ${errorData.error || response.statusText}`);
-    }
-    const data = await response.json();
-    console.log('Month-wise loss data from API:', data); // Debugging log
-    if (!data || data.length === 0) {
-      console.warn('No month-wise loss data received from API');
-    }
-    return data;
-  } catch (error) {
-    console.error('Error fetching month-wise loss:', error);
-    throw error;
+export const getMonthWiseLoss = async (type: 'total' | 'percentage') => {
+  const response = await fetch(`/api/analysis/month-wise-loss?type=${type}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch month-wise loss data');
   }
+  return response.json();
 };
 
 export async function getProcessWiseLoss() {

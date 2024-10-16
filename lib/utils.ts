@@ -12,7 +12,8 @@ export function convertToPureGold(weight: number, karat: number): number {
 
 export function parseDate(dateString: string): Date {
   const [day, month, year] = dateString.split('/').map(Number);
-  return new Date(Date.UTC(year + 2000, month - 1, day));
+  const fullYear = year < 100 ? 2000 + year : year;
+  return new Date(Date.UTC(fullYear, month - 1, day));
 }
 
 export async function processLossData(file: File) {

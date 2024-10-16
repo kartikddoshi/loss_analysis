@@ -1,5 +1,6 @@
-import { prisma } from './database'
-import { UploadMode } from '@/types'
+import { PrismaClient, Prisma } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const BATCH_SIZE = 100; // Adjust this value based on your needs
 
@@ -73,33 +74,99 @@ export const DatabaseService = {
     .slice(0, 15);
   },
 
-  getMonthWiseLoss: async () => {
-    const weightData = await prisma.weightData.findMany({
-      select: { item_no: true, pure_gold_weight: true, date: true }
-    });
-    const itemNos = weightData.map(item => item.item_no);
+  getMonthWiseLoss: async (type: 'total' | 'percentage') => {
+    // Check weight_data
+    const weightDataCheck = await prisma.$queryRaw`
+      SELECT 
+        MIN(date) as min_date,
+        MAX(date) as max_date,
+        COUNT(*) as total_records,
+        SUM(pure_gold_weight) as total_weight
+      FROM weight_data
+    `;
+    console.log('Weight data check:', weightDataCheck);
 
-    const lossData = await prisma.lossData.findMany({
-      where: { item_no: { in: itemNos } },
-      select: { item_no: true, pure_gold_loss: true, date: true }
-    });
+    // Check loss_data
+    const lossDataCheck = await prisma.$queryRaw`
+      SELECT 
+        MIN(date) as min_date,
+        MAX(date) as max_date,
+        COUNT(*) as total_records,
+        SUM(pure_gold_loss) as total_loss
+      FROM loss_data
+    `;
+    console.log('Loss data check:', lossDataCheck);
 
-    const monthlyData = lossData.reduce((acc, loss) => {
-      const month = loss.date.toISOString().slice(0, 7); // YYYY-MM format
-      if (!acc[month]) {
-        acc[month] = { total_loss: 0, total_weight: 0 };
-      }
-      acc[month].total_loss += loss.pure_gold_loss;
-      const weight = weightData.find(w => w.item_no === loss.item_no)?.pure_gold_weight || 0;
-      acc[month].total_weight += weight;
-      return acc;
-    }, {} as Record<string, { total_loss: number, total_weight: number }>);
+    const dateRange = await prisma.$queryRaw`
+      SELECT 
+        MIN(date) as min_date,
+        MAX(date) as max_date
+      FROM weight_data
+    `;
+    console.log('Date range:', dateRange);
 
-    return Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      total_loss: Number(data.total_loss.toFixed(3)),
-      loss_percentage: Number(((data.total_loss / data.total_weight) * 100).toFixed(3))
-    })).sort((a, b) => a.month.localeCompare(b.month));
+    if (!dateRange || !dateRange[0].min_date || !dateRange[0].max_date) {
+      console.log('No data found in the database');
+      return [];
+    }
+
+    const minDate = new Date(Number(dateRange[0].min_date));
+    const maxDate = new Date(Number(dateRange[0].max_date));
+
+    console.log('Min date:', minDate, 'Max date:', maxDate);
+
+    const result = await prisma.$queryRaw`
+      WITH RECURSIVE
+      months(date) AS (
+        SELECT date(${minDate.toISOString().slice(0, 10)}, 'start of month')
+        UNION ALL
+        SELECT date(date, '+1 month')
+        FROM months
+        WHERE date < date(${maxDate.toISOString().slice(0, 10)}, 'start of month')
+      ),
+      monthly_weight AS (
+        SELECT 
+          strftime('%Y-%m-01', date) as month,
+          GROUP_CONCAT(DISTINCT item_no) as item_nos,
+          SUM(pure_gold_weight) as total_weight
+        FROM weight_data
+        GROUP BY strftime('%Y-%m-01', date)
+      ),
+      monthly_loss AS (
+        SELECT 
+          mw.month,
+          SUM(l.pure_gold_loss) as total_loss
+        FROM monthly_weight mw
+        JOIN loss_data l ON l.item_no IN (SELECT value FROM json_each('["' || replace(mw.item_nos, ',', '","') || '"]'))
+        GROUP BY mw.month
+      )
+      SELECT 
+        months.date as month,
+        COALESCE(mw.total_weight, 0) as total_weight,
+        COALESCE(ml.total_loss, 0) as total_loss,
+        CASE 
+          WHEN COALESCE(mw.total_weight, 0) > 0 
+          THEN (COALESCE(ml.total_loss, 0) / mw.total_weight) * 100 
+          ELSE 0 
+        END as percentage_loss
+      FROM months
+      LEFT JOIN monthly_weight mw ON months.date = mw.month
+      LEFT JOIN monthly_loss ml ON months.date = ml.month
+      ORDER BY months.date
+    `;
+    console.log('Month-wise loss result:', result);
+
+    // Add this to check if we're getting any results before the mapping
+    if (result.length > 0) {
+      console.log('Sample result:', result[0]);
+    }
+
+    return result.map(item => ({
+      month: item.month,
+      total_weight: Number(item.total_weight),
+      total_loss: Number(item.total_loss),
+      percentage_loss: Number(item.percentage_loss)
+    }));
   },
 
   getProcessWiseLoss: async () => {
@@ -314,5 +381,22 @@ export const DatabaseService = {
         date: item.date,
       };
     });
+  },
+
+  checkLossData: async () => {
+    const result = await prisma.$queryRaw`
+      SELECT 
+        MIN(date) as min_date,
+        MAX(date) as max_date,
+        COUNT(*) as total_records,
+        SUM(pure_gold_loss) as total_loss
+      FROM loss_data
+    `;
+    return {
+      min_date: result[0].min_date ? Number(result[0].min_date) : null,
+      max_date: result[0].max_date ? Number(result[0].max_date) : null,
+      total_records: Number(result[0].total_records),
+      total_loss: Number(result[0].total_loss)
+    };
   },
 };
