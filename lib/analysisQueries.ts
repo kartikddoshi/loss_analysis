@@ -44,8 +44,8 @@ export async function getKarigarWiseLoss() {
   }
 }
 
-export const getMonthWiseLoss = async (type: 'total' | 'percentage') => {
-  const response = await fetch(`/api/analysis/month-wise-loss?type=${type}`);
+export const getMonthWiseLoss = async () => {
+  const response = await fetch('/api/analysis/month-wise-loss');
   if (!response.ok) {
     throw new Error('Failed to fetch month-wise loss data');
   }

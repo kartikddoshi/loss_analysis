@@ -1,40 +1,33 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { DatabaseService } from '@/lib/databaseService'
-
-// Helper function to convert BigInt to Number
-const convertBigIntToNumber = (obj: any): any => {
-  if (typeof obj === 'bigint') {
-    return Number(obj);
-  }
-  if (Array.isArray(obj)) {
-    return obj.map(convertBigIntToNumber);
-  }
-  if (typeof obj === 'object' && obj !== null) {
-    return Object.fromEntries(
-      Object.entries(obj).map(([key, value]) => [key, convertBigIntToNumber(value)])
-    );
-  }
-  return obj;
-};
+import { prisma } from '@/lib/database'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const lossDataCheck = await DatabaseService.checkLossData();
-    console.log('Loss data check result:', JSON.stringify(convertBigIntToNumber(lossDataCheck), null, 2));
+    const result = await prisma.$queryRaw`
+      SELECT 
+        strftime('%Y-%m', WeightData.date) as month,
+        SUM(WeightData.pure_gold_weight) as total_pure_gold_weight,
+        SUM(LossData.pure_gold_loss) as total_pure_gold_loss
+      FROM 
+        weight_data AS WeightData
+      LEFT JOIN 
+        loss_data AS LossData ON WeightData.item_no = LossData.item_no
+      GROUP BY 
+        strftime('%Y-%m', WeightData.date)
+      ORDER BY 
+        month
+    `;
 
-    const type = req.query.type === 'percentage' ? 'percentage' : 'total';
-    console.log('Fetching month-wise loss data from API...', { type });
-    const result = await DatabaseService.getMonthWiseLoss(type)
-    console.log('Month-wise loss API result:', JSON.stringify(convertBigIntToNumber(result), null, 2));
+    const formattedResult = result.map((item: any) => ({
+      month: item.month,
+      total_pure_gold_weight: Number(item.total_pure_gold_weight),
+      total_pure_gold_loss: Number(item.total_pure_gold_loss),
+      loss_percentage: (item.total_pure_gold_loss / item.total_pure_gold_weight) * 100
+    }));
 
-    if (!result || result.length === 0) {
-      console.log('No data returned from the query');
-      return res.status(404).json({ error: 'No data found' });
-    }
-
-    res.status(200).json(convertBigIntToNumber(result))
+    res.status(200).json(formattedResult);
   } catch (error) {
-    console.error('Error in month-wise-loss API:', error)
-    res.status(500).json({ error: 'Error fetching month-wise loss data', details: error.message })
+    console.error('Error in month-wise-loss API:', error);
+    res.status(500).json({ error: 'Error fetching month-wise loss data' });
   }
 }

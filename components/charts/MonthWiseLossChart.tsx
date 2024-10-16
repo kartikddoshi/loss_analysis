@@ -4,18 +4,14 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getMonthWiseLoss } from '@/lib/analysisQueries'
 
-const CustomTooltip = ({ active, payload, label, chartType }) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-gray-800 text-white p-2 border border-gray-600 rounded shadow-md">
         <p className="font-bold">{label}</p>
-        <p>{chartType === 'total' ? 'Total Loss' : 'Loss Percentage'}: {payload[0].value.toFixed(3)} {chartType === 'total' ? 'g' : '%'}</p>
-        {chartType === 'percentage' && (
-          <>
-            <p>Total Loss: {payload[0].payload.total_loss.toFixed(3)} g</p>
-            <p>Total Weight: {payload[0].payload.total_weight.toFixed(3)} g</p>
-          </>
-        )}
+        <p>Total Pure Gold Weight: {payload[0].payload.total_pure_gold_weight.toFixed(3)} g</p>
+        <p>Total Pure Gold Loss: {payload[0].payload.total_pure_gold_loss.toFixed(3)} g</p>
+        <p>Loss Percentage: {payload[0].payload.loss_percentage.toFixed(2)}%</p>
       </div>
     );
   }
@@ -23,11 +19,11 @@ const CustomTooltip = ({ active, payload, label, chartType }) => {
 };
 
 const MonthWiseLossChart: React.FC = () => {
-  const [chartType, setChartType] = useState('total')
+  const [chartType, setChartType] = useState('percentage')
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['monthWiseLoss', chartType],
-    queryFn: () => getMonthWiseLoss(chartType)
+    queryKey: ['monthWiseLoss'],
+    queryFn: getMonthWiseLoss
   })
 
   if (isLoading) return <div>Loading...</div>
@@ -36,11 +32,9 @@ const MonthWiseLossChart: React.FC = () => {
 
   const formatData = (data) => {
     return data.map(item => ({
-      month: new Date(item.month).toLocaleDateString('default', { month: 'short', year: 'numeric' }),
-      value: chartType === 'total' ? item.total_loss : item.percentage_loss,
-      total_loss: item.total_loss,
-      total_weight: item.total_weight,
-      percentage_loss: item.percentage_loss
+      ...item,
+      month: new Date(item.month + '-01').toLocaleDateString('default', { month: 'short', year: 'numeric' }),
+      value: chartType === 'total' ? item.total_pure_gold_loss : item.loss_percentage,
     }));
   };
 
@@ -66,9 +60,14 @@ const MonthWiseLossChart: React.FC = () => {
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis dataKey="month" stroke="#D1D5DB" />
           <YAxis stroke="#D1D5DB" domain={[0, 'auto']} />
-          <Tooltip content={<CustomTooltip chartType={chartType} />} />
+          <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Line type="monotone" dataKey="value" stroke="#F59E0B" name={chartType === 'total' ? 'Total Loss (g)' : 'Loss Percentage (%)'} />
+          <Line 
+            type="monotone" 
+            dataKey="value" 
+            stroke="#F59E0B" 
+            name={chartType === 'total' ? 'Total Pure Gold Loss (g)' : 'Loss Percentage (%)'} 
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -37,7 +37,7 @@ const ItemWiseLossChart: React.FC<ItemWiseLossChartProps> = ({ onItemSelect }) =
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis dataKey="item_no" stroke="#D1D5DB" hide={true} /> {/* Hide the X-axis labels */}
+          <XAxis dataKey="item_no" stroke="#D1D5DB" hide={true} />
           <YAxis stroke="#D1D5DB" />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
