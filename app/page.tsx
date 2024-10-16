@@ -7,8 +7,11 @@ import UploadForm from '@/components/UploadForm'
 import ItemList from '@/components/ItemList'
 import AIInsightsButton from '@/components/AIInsightsButton'
 
-const AnalysisCharts = dynamic(() => import('@/components/AnalysisCharts'), { ssr: false })
 const ItemDetails = dynamic(() => import('@/components/ItemDetails'), { ssr: false })
+const ItemWiseLossChart = dynamic(() => import('@/components/charts/ItemWiseLossChart'), { ssr: false })
+const KarigarWiseLossChart = dynamic(() => import('@/components/charts/KarigarWiseLossChart'), { ssr: false })
+const MonthWiseLossChart = dynamic(() => import('@/components/charts/MonthWiseLossChart'), { ssr: false })
+const ProcessWiseLossChart = dynamic(() => import('@/components/charts/ProcessWiseLossChart'), { ssr: false })
 
 const queryClient = new QueryClient()
 
@@ -40,10 +43,10 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">Analysis Charts</h2>
-            <AnalysisCharts onItemSelect={setSelectedItem} />
-          </div>
+          <ItemWiseLossChart onItemSelect={setSelectedItem} />
+          <KarigarWiseLossChart />
+          <MonthWiseLossChart />
+          <ProcessWiseLossChart />
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold mb-4 text-gray-700 dark:text-gray-200">AI Insights</h2>
             <AIInsightsButton />
